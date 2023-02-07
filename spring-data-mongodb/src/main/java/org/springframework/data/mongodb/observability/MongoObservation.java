@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 package org.springframework.data.mongodb.observability;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * A MongoDB-based {@link io.micrometer.observation.Observation}.
  *
  * @author Marcin Grzejszczak
  * @author Greg Turnquist
- * @since 4.0.0
+ * @since 4.0
  */
-enum MongoObservation implements DocumentedObservation {
+enum MongoObservation implements ObservationDocumentation {
 
 	/**
 	 * Timer created around a MongoDB command execution.
@@ -44,13 +44,9 @@ enum MongoObservation implements DocumentedObservation {
 
 		@Override
 		public KeyName[] getHighCardinalityKeyNames() {
-			return HighCardinalityCommandKeyNames.values();
+			return new KeyName[0];
 		}
 
-		@Override
-		public String getPrefix() {
-			return "spring.data.mongodb";
-		}
 	};
 
 	/**
@@ -59,12 +55,102 @@ enum MongoObservation implements DocumentedObservation {
 	enum LowCardinalityCommandKeyNames implements KeyName {
 
 		/**
+		 * MongoDB database system.
+		 */
+		DB_SYSTEM {
+			@Override
+			public String asString() {
+				return "db.system";
+			}
+		},
+
+		/**
+		 * MongoDB connection string.
+		 */
+		DB_CONNECTION_STRING {
+			@Override
+			public String asString() {
+				return "db.connection_string";
+			}
+		},
+
+		/**
+		 * Network transport.
+		 */
+		NET_TRANSPORT {
+			@Override
+			public String asString() {
+				return "net.transport";
+			}
+		},
+
+		/**
+		 * Name of the database host.
+		 */
+		NET_PEER_NAME {
+			@Override
+			public String asString() {
+				return "net.peer.name";
+			}
+		},
+
+		/**
+		 * Logical remote port number.
+		 */
+		NET_PEER_PORT {
+			@Override
+			public String asString() {
+				return "net.peer.port";
+			}
+		},
+
+		/**
+		 * Mongo peer address.
+		 */
+		NET_SOCK_PEER_ADDR {
+			@Override
+			public String asString() {
+				return "net.sock.peer.addr";
+			}
+		},
+
+		/**
+		 * Mongo peer port.
+		 */
+		NET_SOCK_PEER_PORT {
+			@Override
+			public String asString() {
+				return "net.sock.peer.port";
+			}
+		},
+
+		/**
+		 * MongoDB user.
+		 */
+		DB_USER {
+			@Override
+			public String asString() {
+				return "db.user";
+			}
+		},
+
+		/**
+		 * MongoDB database name.
+		 */
+		DB_NAME {
+			@Override
+			public String asString() {
+				return "db.name";
+			}
+		},
+
+		/**
 		 * MongoDB collection name.
 		 */
 		MONGODB_COLLECTION {
 			@Override
 			public String asString() {
-				return "spring.data.mongodb.collection";
+				return "db.mongodb.collection";
 			}
 		},
 
@@ -76,13 +162,7 @@ enum MongoObservation implements DocumentedObservation {
 			public String asString() {
 				return "spring.data.mongodb.cluster_id";
 			}
-		}
-	}
-
-	/**
-	 * Enums related to high cardinality key names for MongoDB commands.
-	 */
-	enum HighCardinalityCommandKeyNames implements KeyName {
+		},
 
 		/**
 		 * MongoDB command value.
@@ -90,8 +170,9 @@ enum MongoObservation implements DocumentedObservation {
 		MONGODB_COMMAND {
 			@Override
 			public String asString() {
-				return "spring.data.mongodb.command";
+				return "db.operation";
 			}
 		}
 	}
+
 }

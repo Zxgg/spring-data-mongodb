@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2022 the original author or authors.
+ * Copyright 2011-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,6 @@ import org.springframework.data.mongodb.util.BsonUtils;
 import org.springframework.data.projection.EntityProjection;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
-import org.springframework.data.util.ClassTypeInformation;
 import org.springframework.data.util.Predicates;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
@@ -2068,7 +2067,7 @@ public class MappingMongoConverter extends AbstractMongoConverter implements App
 		}
 
 		@Override
-		public ClassTypeInformation<?> getRawTypeInformation() {
+		public TypeInformation<?> getRawTypeInformation() {
 			return delegate.getRawTypeInformation();
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,12 +52,14 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 /**
  * {@link Task} implementation for obtaining {@link ChangeStreamDocument ChangeStreamDocuments} from MongoDB.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Myroslav Kosinskyi
  * @since 2.1
  */
 class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>, Object> {
@@ -86,6 +88,7 @@ class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>,
 		Collation collation = null;
 		FullDocument fullDocument = ClassUtils.isAssignable(Document.class, targetType) ? FullDocument.DEFAULT
 				: FullDocument.UPDATE_LOOKUP;
+		FullDocumentBeforeChange fullDocumentBeforeChange = FullDocumentBeforeChange.DEFAULT;
 		BsonTimestamp startAt = null;
 		boolean resumeAfter = true;
 
@@ -112,6 +115,9 @@ class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>,
 			fullDocument = changeStreamOptions.getFullDocumentLookup()
 					.orElseGet(() -> ClassUtils.isAssignable(Document.class, targetType) ? FullDocument.DEFAULT
 							: FullDocument.UPDATE_LOOKUP);
+
+			fullDocumentBeforeChange = changeStreamOptions.getFullDocumentBeforeChangeLookup()
+					.orElse(FullDocumentBeforeChange.DEFAULT);
 
 			startAt = changeStreamOptions.getResumeBsonTimestamp().orElse(null);
 		}
@@ -144,7 +150,7 @@ class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>,
 		}
 
 		if (startAt != null) {
-			iterable.startAtOperationTime(startAt);
+			iterable = iterable.startAtOperationTime(startAt);
 		}
 
 		if (collation != null) {
@@ -152,6 +158,7 @@ class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>,
 		}
 
 		iterable = iterable.fullDocument(fullDocument);
+		iterable = iterable.fullDocumentBeforeChange(fullDocumentBeforeChange);
 
 		return iterable.iterator();
 	}
@@ -228,6 +235,12 @@ class ChangeStreamTask extends CursorReadingTask<ChangeStreamDocument<Document>,
 		@Override
 		public T getBody() {
 			return delegate.getBody();
+		}
+
+		@Nullable
+		@Override
+		public T getBodyBeforeChange() {
+			return delegate.getBodyBeforeChange();
 		}
 
 		@Override

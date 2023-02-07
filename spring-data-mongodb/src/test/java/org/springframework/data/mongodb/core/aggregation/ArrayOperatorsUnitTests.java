@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.aggregation.ArrayOperators.ArrayToObject;
 
 /**
@@ -170,5 +171,12 @@ public class ArrayOperatorsUnitTests {
 
 		assertThat(ArrayOperators.arrayOf("field").last().toDocument(Aggregation.DEFAULT_CONTEXT))
 				.isEqualTo("{ $last : \"$field\" }");
+	}
+
+	@Test // GH-4139
+	void sortByWithFieldRef() {
+
+		assertThat(ArrayOperators.arrayOf("team").sort(Sort.by("name")).toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo("{ $sortArray: { input: \"$team\", sortBy: { name: 1 } } }");
 	}
 }

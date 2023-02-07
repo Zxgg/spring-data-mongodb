@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 the original author or authors.
+ * Copyright 2021-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,34 @@ class AccumulatorOperatorsUnitTests {
 
 		assertThat(valueOf("price").expMovingAvg().alpha(0.75).toDocument(Aggregation.DEFAULT_CONTEXT))
 				.isEqualTo(Document.parse("{ $expMovingAvg: { input: \"$price\", alpha: 0.75 } }"));
+	}
+
+	@Test // GH-4139
+	void rendersMax() {
+
+		assertThat(valueOf("price").max().toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $max: \"$price\" }"));
+	}
+
+	@Test // GH-4139
+	void rendersMaxN() {
+
+		assertThat(valueOf("price").max(3).toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $maxN: { n: 3, input : \"$price\" } }"));
+	}
+
+	@Test // GH-4139
+	void rendersMin() {
+
+		assertThat(valueOf("price").min().toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $min: \"$price\" }"));
+	}
+
+	@Test // GH-4139
+	void rendersMinN() {
+
+		assertThat(valueOf("price").min(3).toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $minN: { n: 3, input : \"$price\" } }"));
 	}
 
 	static class Jedi {

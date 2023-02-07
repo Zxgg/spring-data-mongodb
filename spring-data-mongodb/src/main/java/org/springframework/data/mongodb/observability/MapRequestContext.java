@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package org.springframework.data.mongodb.observability;
 
-import io.micrometer.observation.Observation;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -24,15 +22,23 @@ import java.util.stream.Stream;
 import com.mongodb.RequestContext;
 
 /**
- * A {@link Map}-based {@link RequestContext}. (For test purposes only).
+ * A {@link Map}-based {@link RequestContext}.
  *
  * @author Marcin Grzejszczak
  * @author Greg Turnquist
  * @since 4.0.0
  */
-class TestRequestContext implements RequestContext {
+class MapRequestContext implements RequestContext {
 
-	private final Map<Object, Object> map = new HashMap<>();
+	private final Map<Object, Object> map;
+
+	public MapRequestContext() {
+		this(new HashMap<>());
+	}
+
+	public MapRequestContext(Map<Object, Object> context) {
+		this.map = context;
+	}
 
 	@Override
 	public <T> T get(Object key) {
@@ -67,12 +73,5 @@ class TestRequestContext implements RequestContext {
 	@Override
 	public Stream<Map.Entry<Object, Object>> stream() {
 		return map.entrySet().stream();
-	}
-
-	static TestRequestContext withObservation(Observation value) {
-
-		TestRequestContext testRequestContext = new TestRequestContext();
-		testRequestContext.put(Observation.class, value);
-		return testRequestContext;
 	}
 }

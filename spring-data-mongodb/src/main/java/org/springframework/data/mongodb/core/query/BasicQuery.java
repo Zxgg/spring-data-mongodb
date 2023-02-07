@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2022 the original author or authors.
+ * Copyright 2010-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ public class BasicQuery extends Query {
 	 *
 	 * @param queryObject must not be {@literal null}.
 	 * @param fieldsObject must not be {@literal null}.
-	 * @throws IllegalArgumentException when {@code sortObject} or {@code fieldsObject} is {@literal null}.
+	 * @throws IllegalArgumentException when {@code queryObject} or {@code fieldsObject} is {@literal null}.
 	 */
 	public BasicQuery(Document queryObject, Document fieldsObject) {
 
@@ -152,7 +152,7 @@ public class BasicQuery extends Query {
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 
 		if (this == o) {
 			return true;

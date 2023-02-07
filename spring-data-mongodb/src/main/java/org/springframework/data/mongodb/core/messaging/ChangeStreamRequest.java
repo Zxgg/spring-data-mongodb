@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.springframework.util.Assert;
 
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 /**
  * {@link SubscriptionRequest} implementation to be used for listening to
@@ -90,6 +91,7 @@ import com.mongodb.client.model.changestream.FullDocument;
  *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Myroslav Kosinskyi
  * @since 2.1
  */
 public class ChangeStreamRequest<T>
@@ -413,7 +415,6 @@ public class ChangeStreamRequest<T>
 		 * Set the {@link FullDocument} lookup to {@link FullDocument#UPDATE_LOOKUP}.
 		 *
 		 * @return this.
-		 * @see #fullDocumentLookup(FullDocument)
 		 * @see ChangeStreamOptions#getFullDocumentLookup()
 		 * @see ChangeStreamOptionsBuilder#fullDocumentLookup(FullDocument)
 		 */
@@ -422,6 +423,22 @@ public class ChangeStreamRequest<T>
 			Assert.notNull(lookup, "FullDocument not be null");
 
 			this.delegate.fullDocumentLookup(lookup);
+			return this;
+		}
+
+		/**
+		 * Set the {@link FullDocumentBeforeChange} lookup to the given value.
+		 *
+		 * @return this.
+		 * @since 4.0
+		 * @see ChangeStreamOptions#getFullDocumentBeforeChangeLookup()
+		 * @see ChangeStreamOptionsBuilder#fullDocumentBeforeChangeLookup(FullDocumentBeforeChange)
+		 */
+		public ChangeStreamRequestBuilder<T> fullDocumentBeforeChangeLookup(FullDocumentBeforeChange lookup) {
+
+			Assert.notNull(lookup, "FullDocumentBeforeChange not be null");
+
+			this.delegate.fullDocumentBeforeChangeLookup(lookup);
 			return this;
 		}
 

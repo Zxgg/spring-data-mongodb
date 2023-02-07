@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.mongodb.core.aggregation.Aggregation.SystemVariable;
 import org.springframework.data.mongodb.core.aggregation.ObjectOperators.MergeObjects;
 
 /**
@@ -101,6 +100,27 @@ public class ObjectOperatorsUnitTests {
 
 		assertThat(ObjectOperators.valueOf(EXPRESSION).toArray().toDocument(Aggregation.DEFAULT_CONTEXT))
 				.isEqualTo(Document.parse("{ $objectToArray : " + EXPRESSION_STRING + " }"));
+	}
+
+	@Test // GH-4139
+	public void getField() {
+
+		assertThat(ObjectOperators.valueOf("batman").getField("robin").toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $getField : { field : \"robin\", input : \"$batman\" }}"));
+	}
+
+	@Test // GH-4139
+	public void setField() {
+
+		assertThat(ObjectOperators.valueOf("batman").setField("friend").toValue("robin").toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $setField : { field : \"friend\", value : \"robin\", input : \"$batman\" }}"));
+	}
+
+	@Test // GH-4139
+	public void removeField() {
+
+		assertThat(ObjectOperators.valueOf("batman").removeField("joker").toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo(Document.parse("{ $setField : { field : \"joker\", value : \"$$REMOVE\", input : \"$batman\" }}"));
 	}
 
 }

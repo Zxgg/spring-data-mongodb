@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -361,7 +361,7 @@ public class ReactiveMongoTransactionManager extends AbstractReactiveTransaction
 				debugString += String.format("causallyConsistent = %s, ", session.isCausallyConsistent());
 				debugString += String.format("txActive = %s, ", session.hasActiveTransaction());
 				debugString += String.format("txNumber = %d, ", session.getServerSession().getTransactionNumber());
-				debugString += String.format("closed = %d, ", session.getServerSession().isClosed());
+				debugString += String.format("closed = %b, ", session.getServerSession().isClosed());
 				debugString += String.format("clusterTime = %s", session.getClusterTime());
 			} else {
 				debugString += "id = n/a";

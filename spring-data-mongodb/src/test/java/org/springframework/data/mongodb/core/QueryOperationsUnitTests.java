@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 the original author or authors.
+ * Copyright 2021-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,6 +202,15 @@ class QueryOperationsUnitTests {
 		assertThat(queryOperations.createInsertContext(new Document("value", "one")).prepareId(Person.class).getDocument())//
 				.satisfies(result -> {
 					assertThat(result).isEqualTo(new Document("value", "one"));
+				});
+	}
+
+	@Test // GH-4184
+	void insertContextDoesNotOverrideExistingId() {
+
+		assertThat(queryOperations.createInsertContext(new Document("_id", "abc")).prepareId(Person.class).getDocument())//
+				.satisfies(result -> {
+					assertThat(result).isEqualTo(new Document("_id", "abc"));
 				});
 	}
 

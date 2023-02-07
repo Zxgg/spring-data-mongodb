@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 the original author or authors.
+ * Copyright 2021-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package org.springframework.data.mongodb.core.aggregation;
 
 import static org.springframework.data.mongodb.test.util.Assertions.*;
 
+import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.data.mongodb.core.aggregation.DateOperators.Timezone;
 
 /**
@@ -47,6 +47,21 @@ class DateOperatorsUnitTests {
 		assertThat(DateOperators.zonedDateOf("purchaseDate", Timezone.valueOf("America/Chicago")).add(3, "day")
 				.toDocument(Aggregation.DEFAULT_CONTEXT)).isEqualTo(
 						"{ $dateAdd: { startDate: \"$purchaseDate\", unit: \"day\", amount: 3, timezone : \"America/Chicago\" } }");
+	}
+
+	@Test // GH-4139
+	void rendersDateSubtract() {
+
+		assertThat(DateOperators.dateOf("purchaseDate").subtract(3, "day").toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo("{ $dateSubtract: { startDate: \"$purchaseDate\", unit: \"day\", amount: 3 } }");
+	}
+
+	@Test // GH-4139
+	void rendersDateSubtractWithTimezone() {
+
+		assertThat(DateOperators.zonedDateOf("purchaseDate", Timezone.valueOf("America/Chicago")).subtract(3, "day")
+				.toDocument(Aggregation.DEFAULT_CONTEXT)).isEqualTo(
+				"{ $dateSubtract: { startDate: \"$purchaseDate\", unit: \"day\", amount: 3, timezone : \"America/Chicago\" } }");
 	}
 
 	@Test // GH-3713
@@ -86,5 +101,47 @@ class DateOperatorsUnitTests {
 	@Test // GH-3713
 	void rendersTimezoneFromZoneId() {
 		assertThat(DateOperators.Timezone.fromZone(ZoneId.of("America/Chicago")).getValue()).isEqualTo("America/Chicago");
+	}
+
+	@Test // GH-4139
+	void rendersDateTrunc() {
+
+		assertThat(DateOperators.dateOf("purchaseDate").truncate("week").binSize(2).startOfWeek(DayOfWeek.MONDAY).toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo("{ $dateTrunc: { date: \"$purchaseDate\", unit: \"week\", binSize: 2, startOfWeek : \"monday\" } }");
+	}
+
+	@Test // GH-4139
+	void rendersDateTruncWithTimezone() {
+
+		assertThat(DateOperators.zonedDateOf("purchaseDate", Timezone.valueOf("America/Chicago")).truncate("week").binSize(2).startOfWeek(DayOfWeek.MONDAY).toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo("{ $dateTrunc: { date: \"$purchaseDate\", unit: \"week\", binSize: 2, startOfWeek : \"monday\", timezone : \"America/Chicago\" } }");
+	}
+
+	@Test // GH-4139
+	void rendersTsIncrement() {
+
+		assertThat(DateOperators.dateOf("saleTimestamp").tsIncrement().toDocument(Aggregation.DEFAULT_CONTEXT)).isEqualTo(
+						"{ $tsIncrement: \"$saleTimestamp\" }");
+	}
+
+	@Test // GH-4139
+	void tsIncrementErrorsOnTimezone() {
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> DateOperators.zonedDateOf("purchaseDate", Timezone.valueOf("America/Chicago")).tsIncrement());
+	}
+
+	@Test // GH-4139
+	void rendersTsSecond() {
+
+		assertThat(DateOperators.dateOf("saleTimestamp").tsSecond().toDocument(Aggregation.DEFAULT_CONTEXT)).isEqualTo(
+				"{ $tsSecond: \"$saleTimestamp\" }");
+	}
+
+	@Test // GH-4139
+	void tsSecondErrorsOnTimezone() {
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> DateOperators.zonedDateOf("purchaseDate", Timezone.valueOf("America/Chicago")).tsSecond());
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,21 +36,29 @@ import com.mongodb.client.model.changestream.OperationType;
  *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Myroslav Kosinskyi
  * @since 2.1
  */
 public class ChangeStreamEvent<T> {
 
 	@SuppressWarnings("rawtypes") //
-	private static final AtomicReferenceFieldUpdater<ChangeStreamEvent, Object> CONVERTED_UPDATER = AtomicReferenceFieldUpdater
-			.newUpdater(ChangeStreamEvent.class, Object.class, "converted");
+	private static final AtomicReferenceFieldUpdater<ChangeStreamEvent, Object> CONVERTED_FULL_DOCUMENT_UPDATER = AtomicReferenceFieldUpdater
+			.newUpdater(ChangeStreamEvent.class, Object.class, "convertedFullDocument");
+
+	@SuppressWarnings("rawtypes") //
+	private static final AtomicReferenceFieldUpdater<ChangeStreamEvent, Object> CONVERTED_FULL_DOCUMENT_BEFORE_CHANGE_UPDATER = AtomicReferenceFieldUpdater
+			.newUpdater(ChangeStreamEvent.class, Object.class, "convertedFullDocumentBeforeChange");
 
 	private final @Nullable ChangeStreamDocument<Document> raw;
 
 	private final Class<T> targetType;
 	private final MongoConverter converter;
 
-	// accessed through CONVERTED_UPDATER.
-	private volatile @Nullable T converted;
+	// accessed through CONVERTED_FULL_DOCUMENT_UPDATER.
+	private volatile @Nullable T convertedFullDocument;
+
+	// accessed through CONVERTED_FULL_DOCUMENT_BEFORE_CHANGE_UPDATER.
+	private volatile @Nullable T convertedFullDocumentBeforeChange;
 
 	/**
 	 * @param raw can be {@literal null}.
@@ -147,27 +155,43 @@ public class ChangeStreamEvent<T> {
 	@Nullable
 	public T getBody() {
 
-		if (raw == null) {
+		if (raw == null || raw.getFullDocument() == null) {
 			return null;
 		}
 
-		Document fullDocument = raw.getFullDocument();
+		return getConvertedFullDocument(raw.getFullDocument());
+	}
 
-		if (fullDocument == null) {
-			return targetType.cast(fullDocument);
+	/**
+	 * Get the potentially converted {@link ChangeStreamDocument#getFullDocumentBeforeChange() document} before being changed.
+	 *
+	 * @return {@literal null} when {@link #getRaw()} or {@link ChangeStreamDocument#getFullDocumentBeforeChange()} is
+	 *         {@literal null}.
+	 * @since 4.0
+	 */
+	@Nullable
+	public T getBodyBeforeChange() {
+
+		if (raw == null || raw.getFullDocumentBeforeChange() == null) {
+			return null;
 		}
 
-		return getConverted(fullDocument);
+		return getConvertedFullDocumentBeforeChange(raw.getFullDocumentBeforeChange());
 	}
 
 	@SuppressWarnings("unchecked")
-	private T getConverted(Document fullDocument) {
-		return (T) doGetConverted(fullDocument);
+	private T getConvertedFullDocumentBeforeChange(Document fullDocument) {
+		return (T) doGetConverted(fullDocument, CONVERTED_FULL_DOCUMENT_BEFORE_CHANGE_UPDATER);
 	}
 
-	private Object doGetConverted(Document fullDocument) {
+	@SuppressWarnings("unchecked")
+	private T getConvertedFullDocument(Document fullDocument) {
+		return (T) doGetConverted(fullDocument, CONVERTED_FULL_DOCUMENT_UPDATER);
+	}
 
-		Object result = CONVERTED_UPDATER.get(this);
+	private Object doGetConverted(Document fullDocument, AtomicReferenceFieldUpdater<ChangeStreamEvent, Object> updater) {
+
+		Object result = updater.get(this);
 
 		if (result != null) {
 			return result;
@@ -176,13 +200,13 @@ public class ChangeStreamEvent<T> {
 		if (ClassUtils.isAssignable(Document.class, fullDocument.getClass())) {
 
 			result = converter.read(targetType, fullDocument);
-			return CONVERTED_UPDATER.compareAndSet(this, null, result) ? result : CONVERTED_UPDATER.get(this);
+			return updater.compareAndSet(this, null, result) ? result : updater.get(this);
 		}
 
 		if (converter.getConversionService().canConvert(fullDocument.getClass(), targetType)) {
 
 			result = converter.getConversionService().convert(fullDocument, targetType);
-			return CONVERTED_UPDATER.compareAndSet(this, null, result) ? result : CONVERTED_UPDATER.get(this);
+			return updater.compareAndSet(this, null, result) ? result : updater.get(this);
 		}
 
 		throw new IllegalArgumentException(
@@ -195,7 +219,7 @@ public class ChangeStreamEvent<T> {
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 
 		if (this == o)
 			return true;

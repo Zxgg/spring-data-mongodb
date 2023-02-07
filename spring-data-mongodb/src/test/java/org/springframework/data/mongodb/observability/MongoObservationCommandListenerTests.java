@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,23 @@
  */
 package org.springframework.data.mongodb.observability;
 
-import static io.micrometer.core.tck.MeterRegistryAssert.assertThat;
+import static io.micrometer.core.tck.MeterRegistryAssert.*;
+
+import org.bson.BsonDocument;
+import org.bson.BsonString;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.mongodb.observability.MongoObservation.LowCardinalityCommandKeyNames;
+
+import com.mongodb.RequestContext;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.SynchronousContextProvider;
+import com.mongodb.connection.ClusterId;
+import com.mongodb.connection.ConnectionDescription;
+import com.mongodb.connection.ServerId;
+import com.mongodb.event.CommandFailedEvent;
+import com.mongodb.event.CommandStartedEvent;
+import com.mongodb.event.CommandSucceededEvent;
 
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,27 +40,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 
-import org.bson.BsonDocument;
-import org.bson.BsonString;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.data.mongodb.observability.MongoObservation.HighCardinalityCommandKeyNames;
-import org.springframework.data.mongodb.observability.MongoObservation.LowCardinalityCommandKeyNames;
-
-import com.mongodb.ServerAddress;
-import com.mongodb.connection.ClusterId;
-import com.mongodb.connection.ConnectionDescription;
-import com.mongodb.connection.ServerId;
-import com.mongodb.event.CommandFailedEvent;
-import com.mongodb.event.CommandStartedEvent;
-import com.mongodb.event.CommandSucceededEvent;
-
 /**
  * Series of test cases exercising {@link MongoObservationCommandListener}.
  *
  * @author Marcin Grzejszczak
  * @author Greg Turnquist
- * @since 4.0.0
  */
 class MongoObservationCommandListenerTests {
 
@@ -87,10 +87,10 @@ class MongoObservationCommandListenerTests {
 	void commandStartedShouldNotInstrumentWhenNoParentSampleInRequestContext() {
 
 		// when
-		listener.commandStarted(new CommandStartedEvent(new TestRequestContext(), 0, null, "some name", "", null));
+		listener.commandStarted(new CommandStartedEvent(new MapRequestContext(), 0, null, "some name", "", null));
 
 		// then
-		assertThat(meterRegistry).hasNoMetrics();
+		assertThat(meterRegistry).hasMeterWithName("spring.data.mongodb.command.active");
 	}
 
 	@Test
@@ -98,17 +98,17 @@ class MongoObservationCommandListenerTests {
 
 		// given
 		Observation parent = Observation.start("name", observationRegistry);
-		TestRequestContext testRequestContext = TestRequestContext.withObservation(parent);
+		RequestContext traceRequestContext = getContext();
 
 		// when
-		listener.commandStarted(new CommandStartedEvent(testRequestContext, 0, //
+		listener.commandStarted(new CommandStartedEvent(traceRequestContext, 0, //
 				new ConnectionDescription( //
 						new ServerId( //
 								new ClusterId("description"), //
 								new ServerAddress("localhost", 1234))),
 				"database", "insert", //
 				new BsonDocument("collection", new BsonString("user"))));
-		listener.commandSucceeded(new CommandSucceededEvent(testRequestContext, 0, null, "insert", null, 0));
+		listener.commandSucceeded(new CommandSucceededEvent(traceRequestContext, 0, null, "insert", null, 0));
 
 		// then
 		assertThatTimerRegisteredWithTags();
@@ -119,17 +119,17 @@ class MongoObservationCommandListenerTests {
 
 		// given
 		Observation parent = Observation.start("name", observationRegistry);
-		TestRequestContext testRequestContext = TestRequestContext.withObservation(parent);
+		RequestContext traceRequestContext = getContext();
 
 		// when
-		listener.commandStarted(new CommandStartedEvent(testRequestContext, 0, //
+		listener.commandStarted(new CommandStartedEvent(traceRequestContext, 0, //
 				new ConnectionDescription( //
 						new ServerId( //
 								new ClusterId("description"), //
 								new ServerAddress("localhost", 1234))), //
 				"database", "aggregate", //
 				new BsonDocument("aggregate", new BsonString("user"))));
-		listener.commandSucceeded(new CommandSucceededEvent(testRequestContext, 0, null, "aggregate", null, 0));
+		listener.commandSucceeded(new CommandSucceededEvent(traceRequestContext, 0, null, "aggregate", null, 0));
 
 		// then
 		assertThatTimerRegisteredWithTags();
@@ -140,16 +140,18 @@ class MongoObservationCommandListenerTests {
 
 		// given
 		Observation parent = Observation.start("name", observationRegistry);
-		TestRequestContext testRequestContext = TestRequestContext.withObservation(parent);
+		RequestContext traceRequestContext = getContext();
 
 		// when
-		listener.commandStarted(new CommandStartedEvent(testRequestContext, 0, null, "database", "insert",
+		listener.commandStarted(new CommandStartedEvent(traceRequestContext, 0, null, "database", "insert",
 				new BsonDocument("collection", new BsonString("user"))));
-		listener.commandSucceeded(new CommandSucceededEvent(testRequestContext, 0, null, "insert", null, 0));
+		listener.commandSucceeded(new CommandSucceededEvent(traceRequestContext, 0, null, "insert", null, 0));
 
-		// then
-		assertThat(meterRegistry).hasTimerWithNameAndTags(HighCardinalityCommandKeyNames.MONGODB_COMMAND.asString(),
-				KeyValues.of(LowCardinalityCommandKeyNames.MONGODB_COLLECTION.withValue("user")));
+		assertThat(meterRegistry).hasTimerWithNameAndTags(MongoObservation.MONGODB_COMMAND_OBSERVATION.getName(),
+				KeyValues.of(LowCardinalityCommandKeyNames.MONGODB_COLLECTION.withValue("user"),
+						LowCardinalityCommandKeyNames.DB_NAME.withValue("database"),
+						LowCardinalityCommandKeyNames.MONGODB_COMMAND.withValue("insert"),
+						LowCardinalityCommandKeyNames.DB_SYSTEM.withValue("mongodb")).and("error", "none"));
 	}
 
 	@Test
@@ -157,10 +159,10 @@ class MongoObservationCommandListenerTests {
 
 		// given
 		Observation parent = Observation.start("name", observationRegistry);
-		TestRequestContext testRequestContext = TestRequestContext.withObservation(parent);
+		RequestContext traceRequestContext = getContext();
 
 		// when
-		listener.commandStarted(new CommandStartedEvent(testRequestContext, 0, //
+		listener.commandStarted(new CommandStartedEvent(traceRequestContext, 0, //
 				new ConnectionDescription( //
 						new ServerId( //
 								new ClusterId("description"), //
@@ -168,19 +170,21 @@ class MongoObservationCommandListenerTests {
 				"database", "insert", //
 				new BsonDocument("collection", new BsonString("user"))));
 		listener.commandFailed( //
-				new CommandFailedEvent(testRequestContext, 0, null, "insert", 0, new IllegalAccessException()));
+				new CommandFailedEvent(traceRequestContext, 0, null, "insert", 0, new IllegalAccessException()));
 
 		// then
 		assertThatTimerRegisteredWithTags();
 	}
 
+	private RequestContext getContext() {
+		return ((SynchronousContextProvider) ContextProviderFactory.create(observationRegistry)).getContext();
+	}
+
 	private void assertThatTimerRegisteredWithTags() {
 
 		assertThat(meterRegistry) //
-				.hasTimerWithNameAndTags(HighCardinalityCommandKeyNames.MONGODB_COMMAND.asString(),
-						KeyValues.of(LowCardinalityCommandKeyNames.MONGODB_COLLECTION.withValue("user"))) //
-				.hasTimerWithNameAndTagKeys(HighCardinalityCommandKeyNames.MONGODB_COMMAND.asString(),
-						LowCardinalityCommandKeyNames.MONGODB_CLUSTER_ID.asString());
+				.hasTimerWithNameAndTags(MongoObservation.MONGODB_COMMAND_OBSERVATION.getName(),
+						KeyValues.of(LowCardinalityCommandKeyNames.MONGODB_COLLECTION.withValue("user")));
 	}
 
 }

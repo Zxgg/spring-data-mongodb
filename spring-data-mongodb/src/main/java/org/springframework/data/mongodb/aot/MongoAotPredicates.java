@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,29 @@ package org.springframework.data.mongodb.aot;
 
 import java.util.function.Predicate;
 
-import org.springframework.data.aot.TypeUtils;
 import org.springframework.data.mongodb.core.mapping.MongoSimpleTypes;
+import org.springframework.data.util.ReactiveWrappers;
+import org.springframework.data.util.ReactiveWrappers.ReactiveLibrary;
+import org.springframework.data.util.TypeUtils;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
 
 /**
  * @author Christoph Strobl
  * @since 4.0
  */
-class MongoAotPredicates {
+public class MongoAotPredicates {
 
-	static final Predicate<Class<?>> IS_SIMPLE_TYPE = (type) ->  MongoSimpleTypes.HOLDER.isSimpleType(type) || TypeUtils.type(type).isPartOf("org.bson");
+	public static final Predicate<Class<?>> IS_SIMPLE_TYPE = (type) ->  MongoSimpleTypes.HOLDER.isSimpleType(type) || TypeUtils.type(type).isPartOf("org.bson");
+	public static final Predicate<ReactiveLibrary> IS_REACTIVE_LIBARARY_AVAILABLE = (lib) -> ReactiveWrappers.isAvailable(lib);
+	public static final Predicate<ClassLoader> IS_SYNC_CLIENT_PRESENT = (classLoader) -> ClassUtils.isPresent("com.mongodb.client.MongoClient", classLoader);
+
+	public static boolean isReactorPresent() {
+		return IS_REACTIVE_LIBARARY_AVAILABLE.test(ReactiveWrappers.ReactiveLibrary.PROJECT_REACTOR);
+	}
+
+	public static boolean isSyncClientPresent(@Nullable ClassLoader classLoader) {
+		return IS_SYNC_CLIENT_PRESENT.test(classLoader);
+	}
 
 }

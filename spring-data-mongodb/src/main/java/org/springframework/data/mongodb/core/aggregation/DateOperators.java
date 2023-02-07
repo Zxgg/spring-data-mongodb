@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2022 the original author or authors.
+ * Copyright 2016-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -450,6 +450,121 @@ public class DateOperators {
 		}
 
 		/**
+		 * Creates new {@link AggregationExpression} that subtracts the value of the given {@link AggregationExpression
+		 * expression} (in {@literal units}).
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtractValueOf(AggregationExpression expression, String unit) {
+			return applyTimezone(DateSubtract.subtractValueOf(expression, unit).fromDate(dateReference()), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that subtracts the value of the given {@link AggregationExpression
+		 * expression} (in {@literal units}).
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtractValueOf(AggregationExpression expression, TemporalUnit unit) {
+
+			Assert.notNull(unit, "TemporalUnit must not be null");
+			return applyTimezone(
+					DateSubtract.subtractValueOf(expression, unit.name().toLowerCase(Locale.ROOT)).fromDate(dateReference()),
+					timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that subtracts the value stored at the given {@literal field} (in
+		 * {@literal units}).
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtractValueOf(String fieldReference, String unit) {
+			return applyTimezone(DateSubtract.subtractValueOf(fieldReference, unit).fromDate(dateReference()), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that subtracts the value stored at the given {@literal field} (in
+		 * {@literal units}).
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtractValueOf(String fieldReference, TemporalUnit unit) {
+
+			Assert.notNull(unit, "TemporalUnit must not be null");
+
+			return applyTimezone(
+					DateSubtract.subtractValueOf(fieldReference, unit.name().toLowerCase(Locale.ROOT)).fromDate(dateReference()),
+					timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that subtracts the given value (in {@literal units}).
+		 *
+		 * @param value must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtract(Object value, String unit) {
+			return applyTimezone(DateSubtract.subtractValue(value, unit).fromDate(dateReference()), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that subtracts the given value (in {@literal units}).
+		 *
+		 * @param value must not be {@literal null}.
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 * @since 4.0
+		 */
+		public DateSubtract subtract(Object value, TemporalUnit unit) {
+
+			Assert.notNull(unit, "TemporalUnit must not be null");
+
+			return applyTimezone(
+					DateSubtract.subtractValue(value, unit.name().toLowerCase(Locale.ROOT)).fromDate(dateReference()), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that truncates a date to the given {@literal unit}.
+		 *
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 * @since 4.0
+		 */
+		public DateTrunc truncate(String unit) {
+
+			Assert.notNull(unit, "TemporalUnit must not be null");
+			return applyTimezone(DateTrunc.truncateValue(dateReference()).to(unit), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that truncates a date to the given {@literal unit}.
+		 *
+		 * @param unit the unit of measure. Must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 * @since 4.0
+		 */
+		public DateTrunc truncate(TemporalUnit unit) {
+
+			Assert.notNull(unit, "TemporalUnit must not be null");
+			return truncate(unit.name().toLowerCase(Locale.ROOT));
+		}
+
+		/**
 		 * Creates new {@link AggregationExpression} that returns the day of the year for a date as a number between 1 and
 		 * 366.
 		 *
@@ -701,6 +816,36 @@ public class DateOperators {
 		 */
 		public DateFromString fromString() {
 			return applyTimezone(DateFromString.fromString(dateReference()), timezone);
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that returns the incrementing ordinal from a timestamp.
+		 *
+		 * @return new instance of {@link TsIncrement}.
+		 * @since 4.0
+		 */
+		public TsIncrement tsIncrement() {
+
+			if (timezone != null && !Timezone.none().equals(timezone)) {
+				throw new IllegalArgumentException("$tsIncrement does not support timezones");
+			}
+
+			return TsIncrement.tsIncrement(dateReference());
+		}
+
+		/**
+		 * Creates new {@link AggregationExpression} that returns the seconds from a timestamp.
+		 *
+		 * @return new instance of {@link TsIncrement}.
+		 * @since 4.0
+		 */
+		public TsSecond tsSecond() {
+
+			if (timezone != null && !Timezone.none().equals(timezone)) {
+				throw new IllegalArgumentException("$tsSecond does not support timezones");
+			}
+
+			return TsSecond.tsSecond(dateReference());
 		}
 
 		private Object dateReference() {
@@ -2734,6 +2879,103 @@ public class DateOperators {
 	}
 
 	/**
+	 * {@link AggregationExpression} for {@code $dateSubtract}.<br />
+	 * <strong>NOTE:</strong> Requires MongoDB 5.0 or later.
+	 *
+	 * @author Christoph Strobl
+	 * @since 4.0
+	 */
+	public static class DateSubtract extends TimezonedDateAggregationExpression {
+
+		private DateSubtract(Object value) {
+			super(value);
+		}
+
+		/**
+		 * Subtract the number of {@literal units} of the result of the given {@link AggregationExpression expression} from
+		 * a {@link #fromDate(Object) start date}.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @param unit must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public static DateSubtract subtractValueOf(AggregationExpression expression, String unit) {
+			return subtractValue(expression, unit);
+		}
+
+		/**
+		 * Subtract the number of {@literal units} from a {@literal field} from a {@link #fromDate(Object) start date}.
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @param unit must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public static DateSubtract subtractValueOf(String fieldReference, String unit) {
+			return subtractValue(Fields.field(fieldReference), unit);
+		}
+
+		/**
+		 * Subtract the number of {@literal units} from a {@link #fromDate(Object) start date}.
+		 *
+		 * @param value must not be {@literal null}.
+		 * @param unit must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public static DateSubtract subtractValue(Object value, String unit) {
+
+			Map<String, Object> args = new HashMap<>();
+			args.put("unit", unit);
+			args.put("amount", value);
+			return new DateSubtract(args);
+		}
+
+		/**
+		 * Define the start date, in UTC, for the subtraction operation.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public DateSubtract fromDateOf(AggregationExpression expression) {
+			return fromDate(expression);
+		}
+
+		/**
+		 * Define the start date, in UTC, for the subtraction operation.
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public DateSubtract fromDateOf(String fieldReference) {
+			return fromDate(Fields.field(fieldReference));
+		}
+
+		/**
+		 * Define the start date, in UTC, for the subtraction operation.
+		 *
+		 * @param dateExpression anything that evaluates to a valid date. Must not be {@literal null}.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public DateSubtract fromDate(Object dateExpression) {
+			return new DateSubtract(append("startDate", dateExpression));
+		}
+
+		/**
+		 * Optionally set the {@link Timezone} to use. If not specified {@literal UTC} is used.
+		 *
+		 * @param timezone must not be {@literal null}. Consider {@link Timezone#none()} instead.
+		 * @return new instance of {@link DateSubtract}.
+		 */
+		public DateSubtract withTimezone(Timezone timezone) {
+			return new DateSubtract(appendTimezone(argumentMap(), timezone));
+		}
+
+		@Override
+		protected String getMongoMethod() {
+			return "$dateSubtract";
+		}
+	}
+
+	/**
 	 * {@link AggregationExpression} for {@code $dateDiff}.<br />
 	 * <strong>NOTE:</strong> Requires MongoDB 5.0 or later.
 	 *
@@ -2838,6 +3080,249 @@ public class DateOperators {
 		@Override
 		protected String getMongoMethod() {
 			return "$dateDiff";
+		}
+	}
+
+	/**
+	 * {@link AggregationExpression} for {@code $dateTrunc}.<br />
+	 * <strong>NOTE:</strong> Requires MongoDB 5.0 or later.
+	 *
+	 * @author Christoph Strobl
+	 * @since 4.0
+	 */
+	public static class DateTrunc extends TimezonedDateAggregationExpression {
+
+		private DateTrunc(Object value) {
+			super(value);
+		}
+
+		/**
+		 * Truncates the date value of computed by the given {@link AggregationExpression}.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public static DateTrunc truncateValueOf(AggregationExpression expression) {
+			return truncateValue(expression);
+		}
+
+		/**
+		 * Truncates the date value of the referenced {@literal field}.
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public static DateTrunc truncateValueOf(String fieldReference) {
+			return truncateValue(Fields.field(fieldReference));
+		}
+
+		/**
+		 * Truncates the date value.
+		 *
+		 * @param value must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public static DateTrunc truncateValue(Object value) {
+			return new DateTrunc(Collections.singletonMap("date", value));
+		}
+
+		/**
+		 * Define the unit of time.
+		 *
+		 * @param unit must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc to(String unit) {
+			return new DateTrunc(append("unit", unit));
+		}
+
+		/**
+		 * Define the unit of time via an {@link AggregationExpression}.
+		 *
+		 * @param unit must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc to(AggregationExpression unit) {
+			return new DateTrunc(append("unit", unit));
+		}
+
+		/**
+		 * Define the weeks starting day if {@link #to(String)} resolves to {@literal week}.
+		 *
+		 * @param day must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc startOfWeek(java.time.DayOfWeek day) {
+			return startOfWeek(day.name().toLowerCase(Locale.US));
+		}
+
+		/**
+		 * Define the weeks starting day if {@link #to(String)} resolves to {@literal week}.
+		 *
+		 * @param day must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc startOfWeek(String day) {
+			return new DateTrunc(append("startOfWeek", day));
+		}
+
+		/**
+		 * Define the numeric time value.
+		 *
+		 * @param binSize must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc binSize(int binSize) {
+			return binSize((Object) binSize);
+		}
+
+		/**
+		 * Define the numeric time value via an {@link AggregationExpression}.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc binSize(AggregationExpression expression) {
+			return binSize((Object) expression);
+		}
+
+		/**
+		 * Define the numeric time value.
+		 *
+		 * @param binSize must not be {@literal null}.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc binSize(Object binSize) {
+			return new DateTrunc(append("binSize", binSize));
+		}
+
+		/**
+		 * Optionally set the {@link Timezone} to use. If not specified {@literal UTC} is used.
+		 *
+		 * @param timezone must not be {@literal null}. Consider {@link Timezone#none()} instead.
+		 * @return new instance of {@link DateTrunc}.
+		 */
+		public DateTrunc withTimezone(Timezone timezone) {
+			return new DateTrunc(appendTimezone(argumentMap(), timezone));
+		}
+
+		@Override
+		protected String getMongoMethod() {
+			return "$dateTrunc";
+		}
+	}
+
+	/**
+	 * {@link AggregationExpression} for {@code $tsIncrement}.
+	 *
+	 * @author Christoph Strobl
+	 * @since 4.0
+	 */
+	public static class TsIncrement extends AbstractAggregationExpression {
+
+		private TsIncrement(Object value) {
+			super(value);
+		}
+
+		/**
+		 * Creates new {@link TsIncrement} that returns the incrementing ordinal from a timestamp.
+		 *
+		 * @param value must not be {@literal null}.
+		 * @return new instance of {@link TsIncrement}.
+		 * @throws IllegalArgumentException if given {@literal value} is {@literal null}.
+		 */
+		public static TsIncrement tsIncrement(Object value) {
+
+			Assert.notNull(value, "Value must not be null");
+			return new TsIncrement(value);
+		}
+
+		/**
+		 * Creates new {@link TsIncrement} that returns the incrementing ordinal from a timestamp.
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @return new instance of {@link TsIncrement}.
+		 * @throws IllegalArgumentException if given {@literal fieldReference} is {@literal null}.
+		 */
+		public static TsIncrement tsIncrementValueOf(String fieldReference) {
+
+			Assert.notNull(fieldReference, "FieldReference must not be null");
+			return tsIncrement(Fields.field(fieldReference));
+		}
+
+		/**
+		 * Creates new {@link TsIncrement}.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @return new instance of {@link TsIncrement}.
+		 * @throws IllegalArgumentException if given {@literal expression} is {@literal null}.
+		 */
+		public static TsIncrement tsIncrementValueOf(AggregationExpression expression) {
+
+			Assert.notNull(expression, "Expression must not be null");
+			return tsIncrement(expression);
+		}
+
+		@Override
+		protected String getMongoMethod() {
+			return "$tsIncrement";
+		}
+	}
+
+	/**
+	 * {@link AggregationExpression} for {@code $tsSecond}.
+	 *
+	 * @author Christoph Strobl
+	 * @since 4.0
+	 */
+	public static class TsSecond extends AbstractAggregationExpression {
+
+		private TsSecond(Object value) {
+			super(value);
+		}
+
+		/**
+		 * Creates new {@link TsSecond} that returns the incrementing ordinal from a timestamp.
+		 *
+		 * @param value must not be {@literal null}.
+		 * @return new instance of {@link TsSecond}.
+		 * @throws IllegalArgumentException if given {@literal value} is {@literal null}.
+		 */
+		public static TsSecond tsSecond(Object value) {
+
+			Assert.notNull(value, "Value must not be null");
+			return new TsSecond(value);
+		}
+
+		/**
+		 * Creates new {@link TsSecond} that returns the incrementing ordinal from a timestamp.
+		 *
+		 * @param fieldReference must not be {@literal null}.
+		 * @return new instance of {@link TsSecond}.
+		 * @throws IllegalArgumentException if given {@literal fieldReference} is {@literal null}.
+		 */
+		public static TsSecond tsSecondValueOf(String fieldReference) {
+
+			Assert.notNull(fieldReference, "FieldReference must not be null");
+			return tsSecond(Fields.field(fieldReference));
+		}
+
+		/**
+		 * Creates new {@link TsSecond}.
+		 *
+		 * @param expression must not be {@literal null}.
+		 * @return new instance of {@link TsSecond}.
+		 * @throws IllegalArgumentException if given {@literal expression} is {@literal null}.
+		 */
+		public static TsSecond tsSecondValueOf(AggregationExpression expression) {
+
+			Assert.notNull(expression, "Expression must not be null");
+			return tsSecond(expression);
+		}
+
+		@Override
+		protected String getMongoMethod() {
+			return "$tsSecond";
 		}
 	}
 

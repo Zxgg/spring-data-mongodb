@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,6 +142,7 @@ public class MethodReferenceNode extends ExpressionNode {
 		map.put("last", singleArgRef().forOperator("$last"));
 		map.put("size", singleArgRef().forOperator("$size"));
 		map.put("slice", arrayArgRef().forOperator("$slice"));
+		map.put("sortArray", mapArgRef().forOperator("$sortArray").mappingParametersTo("input", "sortBy"));
 		map.put("reverseArray", singleArgRef().forOperator("$reverseArray"));
 		map.put("reduce", mapArgRef().forOperator("$reduce").mappingParametersTo("input", "initialValue", "in"));
 		map.put("zip", mapArgRef().forOperator("$zip").mappingParametersTo("inputs", "useLongestLength", "defaults"));
@@ -161,8 +162,12 @@ public class MethodReferenceNode extends ExpressionNode {
 		// DATE OPERATORS
 		map.put("dateAdd",
 				mapArgRef().forOperator("$dateAdd").mappingParametersTo("startDate", "unit", "amount", "timezone"));
+		map.put("dateSubtract",
+				mapArgRef().forOperator("$dateSubtract").mappingParametersTo("startDate", "unit", "amount", "timezone"));
 		map.put("dateDiff", mapArgRef().forOperator("$dateDiff").mappingParametersTo("startDate", "endDate", "unit",
 				"timezone", "startOfWeek"));
+		map.put("dateTrunc", mapArgRef().forOperator("$dateTrunc").mappingParametersTo("date", "unit", "binSize",
+				"startOfWeek", "timezone"));
 		map.put("dayOfYear", singleArgRef().forOperator("$dayOfYear"));
 		map.put("dayOfMonth", singleArgRef().forOperator("$dayOfMonth"));
 		map.put("dayOfWeek", singleArgRef().forOperator("$dayOfWeek"));
@@ -186,6 +191,8 @@ public class MethodReferenceNode extends ExpressionNode {
 		map.put("isoDayOfWeek", singleArgRef().forOperator("$isoDayOfWeek"));
 		map.put("isoWeek", singleArgRef().forOperator("$isoWeek"));
 		map.put("isoWeekYear", singleArgRef().forOperator("$isoWeekYear"));
+		map.put("tsIncrement", singleArgRef().forOperator("$tsIncrement"));
+		map.put("tsSecond", singleArgRef().forOperator("$tsSecond"));
 
 		// CONDITIONAL OPERATORS
 		map.put("cond", mapArgRef().forOperator("$cond") //
@@ -205,6 +212,22 @@ public class MethodReferenceNode extends ExpressionNode {
 		map.put("stdDevSamp", arrayArgRef().forOperator("$stdDevSamp"));
 		map.put("covariancePop", arrayArgRef().forOperator("$covariancePop"));
 		map.put("covarianceSamp", arrayArgRef().forOperator("$covarianceSamp"));
+		map.put("bottom", mapArgRef().forOperator("$bottom") //
+				.mappingParametersTo("output", "sortBy"));
+		map.put("bottomN", mapArgRef().forOperator("$bottomN") //
+				.mappingParametersTo("n", "output", "sortBy"));
+		map.put("firstN", mapArgRef().forOperator("$firstN") //
+				.mappingParametersTo("n", "input"));
+		map.put("lastN", mapArgRef().forOperator("$lastN") //
+				.mappingParametersTo("n", "input"));
+		map.put("top", mapArgRef().forOperator("$top") //
+				.mappingParametersTo("output", "sortBy"));
+		map.put("topN", mapArgRef().forOperator("$topN") //
+				.mappingParametersTo("n", "output", "sortBy"));
+		map.put("maxN", mapArgRef().forOperator("$maxN") //
+				.mappingParametersTo("n", "input"));
+		map.put("minN", mapArgRef().forOperator("$minN") //
+				.mappingParametersTo("n", "input"));
 
 		// TYPE OPERATORS
 		map.put("type", singleArgRef().forOperator("$type"));
@@ -212,6 +235,8 @@ public class MethodReferenceNode extends ExpressionNode {
 		// OBJECT OPERATORS
 		map.put("objectToArray", singleArgRef().forOperator("$objectToArray"));
 		map.put("mergeObjects", arrayArgRef().forOperator("$mergeObjects"));
+		map.put("getField", mapArgRef().forOperator("$getField").mappingParametersTo("field", "input"));
+		map.put("setField", mapArgRef().forOperator("$setField").mappingParametersTo("field", "value", "input"));
 
 		// CONVERT OPERATORS
 		map.put("convert", mapArgRef().forOperator("$convert") //
@@ -225,6 +250,9 @@ public class MethodReferenceNode extends ExpressionNode {
 		map.put("toObjectId", singleArgRef().forOperator("$toObjectId"));
 		map.put("toString", singleArgRef().forOperator("$toString"));
 		map.put("degreesToRadians", singleArgRef().forOperator("$degreesToRadians"));
+
+		// expression operators
+		map.put("locf", singleArgRef().forOperator("$locf"));
 
 		FUNCTIONS = Collections.unmodifiableMap(map);
 	}

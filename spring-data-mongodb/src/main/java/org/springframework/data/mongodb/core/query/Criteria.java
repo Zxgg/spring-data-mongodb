@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2022 the original author or authors.
+ * Copyright 2010-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -450,7 +450,7 @@ public class Criteria implements CriteriaDefinition {
 
 		Assert.notNull(types, "Types must not be null");
 
-		criteria.put("$type", types.stream().map(Type::value).collect(Collectors.toList()));
+		criteria.put("$type", types.stream().map(Type::toBsonType).map(Type::value).collect(Collectors.toList()));
 		return this;
 	}
 
@@ -624,9 +624,13 @@ public class Criteria implements CriteriaDefinition {
 	}
 
 	/**
-	 * Creates a geo-spatial criterion using a {@literal $maxDistance} operation, for use with $near
+	 * Creates a geo-spatial criterion using a {@literal $maxDistance} operation, for use with {@literal $near} or
+	 * {@literal $nearSphere}.
+	 * <p>
+	 * <strong>NOTE:</strong> The unit of measure for distance may depends on the used coordinate representation
+	 * (legacy vs. geoJson) as well as the target operation.
 	 *
-	 * @param maxDistance
+	 * @param maxDistance radians or meters
 	 * @return this.
 	 * @see <a href="https://docs.mongodb.com/manual/reference/operator/query/maxDistance/">MongoDB Query operator:
 	 *      $maxDistance</a>
@@ -645,8 +649,11 @@ public class Criteria implements CriteriaDefinition {
 	/**
 	 * Creates a geospatial criterion using a {@literal $minDistance} operation, for use with {@literal $near} or
 	 * {@literal $nearSphere}.
+	 * <p>
+	 * <strong>NOTE:</strong> The unit of measure for distance may depends on the used coordinate representation
+	 * (legacy vs. geoJson) as well as the target operation.
 	 *
-	 * @param minDistance
+	 * @param minDistance radians or meters
 	 * @return this.
 	 * @since 1.7
 	 */
@@ -964,7 +971,7 @@ public class Criteria implements CriteriaDefinition {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(@Nullable Object obj) {
 
 		if (this == obj) {
 			return true;

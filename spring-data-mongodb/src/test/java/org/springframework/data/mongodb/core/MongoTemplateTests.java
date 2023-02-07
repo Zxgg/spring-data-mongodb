@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2022 the original author or authors.
+ * Copyright 2011-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -88,6 +87,7 @@ import org.springframework.data.mongodb.test.util.Client;
 import org.springframework.data.mongodb.test.util.MongoClientExtension;
 import org.springframework.data.mongodb.test.util.MongoTestTemplate;
 import org.springframework.data.mongodb.test.util.MongoVersion;
+import org.springframework.lang.Nullable;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -3637,6 +3637,26 @@ public class MongoTemplateTests {
 		assertThat(target).isEqualTo(source);
 	}
 
+	@Test // GH-4184
+	void insertHonorsExistingRawId() {
+
+		RawStringId source = new RawStringId();
+		source.id = "abc";
+		source.value = "new value";
+
+		template.insert(source);
+
+		org.bson.Document result = template
+				.execute(db -> db.getCollection(template.getCollectionName(RawStringId.class))
+						.find().limit(1).cursor().next());
+
+		assertThat(result).isNotNull();
+		assertThat(result.get("_id")).isEqualTo("abc");
+
+		RawStringId target = template.findOne(query(where("id").is(source.id)), RawStringId.class);
+		assertThat(target).isEqualTo(source);
+	}
+
 	@Test // GH-4026
 	void saveShouldGenerateNewIdOfTypeIfExplicitlyDefined() {
 
@@ -3840,7 +3860,7 @@ public class MongoTemplateTests {
 		}
 
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(@Nullable Object obj) {
 			if (this == obj) {
 				return true;
 			}
@@ -4083,7 +4103,7 @@ public class MongoTemplateTests {
 		}
 
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(@Nullable Object obj) {
 
 			if (obj == this) {
 				return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.data.mongodb.aot;
 
+import static org.springframework.data.mongodb.aot.MongoAotPredicates.*;
+
 import java.util.Arrays;
 
 import org.springframework.aot.hint.MemberCategory;
@@ -29,10 +31,8 @@ import org.springframework.data.mongodb.core.mapping.event.ReactiveAfterConvertC
 import org.springframework.data.mongodb.core.mapping.event.ReactiveAfterSaveCallback;
 import org.springframework.data.mongodb.core.mapping.event.ReactiveBeforeConvertCallback;
 import org.springframework.data.mongodb.core.mapping.event.ReactiveBeforeSaveCallback;
-import org.springframework.data.mongodb.repository.support.SimpleMongoRepository;
-import org.springframework.data.mongodb.repository.support.SimpleReactiveMongoRepository;
-import org.springframework.data.repository.util.ReactiveWrappers;
 import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link RuntimeHintsRegistrar} for repository types and entity callbacks.
@@ -43,27 +43,41 @@ import org.springframework.lang.Nullable;
  */
 class MongoRuntimeHints implements RuntimeHintsRegistrar {
 
-	private static final boolean PROJECT_REACTOR_PRESENT = ReactiveWrappers
-			.isAvailable(ReactiveWrappers.ReactiveLibrary.PROJECT_REACTOR);
-
 	@Override
 	public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
 
 		hints.reflection().registerTypes(
-				Arrays.asList(TypeReference.of(SimpleMongoRepository.class), TypeReference.of(BeforeConvertCallback.class),
-						TypeReference.of(BeforeSaveCallback.class), TypeReference.of(AfterConvertCallback.class),
-						TypeReference.of(AfterSaveCallback.class)),
+				Arrays.asList(TypeReference.of(BeforeConvertCallback.class), TypeReference.of(BeforeSaveCallback.class),
+						TypeReference.of(AfterConvertCallback.class), TypeReference.of(AfterSaveCallback.class)),
 				builder -> builder.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
 						MemberCategory.INVOKE_PUBLIC_METHODS));
 
-		if (PROJECT_REACTOR_PRESENT) {
+		registerTransactionProxyHints(hints, classLoader);
+
+		if (isReactorPresent()) {
 
 			hints.reflection()
-					.registerTypes(Arrays.asList(TypeReference.of(SimpleReactiveMongoRepository.class),
-							TypeReference.of(ReactiveBeforeConvertCallback.class), TypeReference.of(ReactiveBeforeSaveCallback.class),
-							TypeReference.of(ReactiveAfterConvertCallback.class), TypeReference.of(ReactiveAfterSaveCallback.class)),
+					.registerTypes(Arrays.asList(TypeReference.of(ReactiveBeforeConvertCallback.class),
+							TypeReference.of(ReactiveBeforeSaveCallback.class), TypeReference.of(ReactiveAfterConvertCallback.class),
+							TypeReference.of(ReactiveAfterSaveCallback.class)),
 							builder -> builder.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
 									MemberCategory.INVOKE_PUBLIC_METHODS));
 		}
+
 	}
+
+	private static void registerTransactionProxyHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+
+		if (MongoAotPredicates.isSyncClientPresent(classLoader)
+				&& ClassUtils.isPresent("org.springframework.aop.SpringProxy", classLoader)) {
+
+			hints.proxies().registerJdkProxy(TypeReference.of("com.mongodb.client.MongoDatabase"),
+					TypeReference.of("org.springframework.aop.SpringProxy"),
+					TypeReference.of("org.springframework.core.DecoratingProxy"));
+			hints.proxies().registerJdkProxy(TypeReference.of("com.mongodb.client.MongoCollection"),
+					TypeReference.of("org.springframework.aop.SpringProxy"),
+					TypeReference.of("org.springframework.core.DecoratingProxy"));
+		}
+	}
+
 }

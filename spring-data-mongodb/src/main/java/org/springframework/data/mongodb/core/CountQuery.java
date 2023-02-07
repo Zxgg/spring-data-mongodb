@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.bson.Document;
-
 import org.springframework.data.geo.Point;
+import org.springframework.data.mongodb.core.query.MetricConversion;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
@@ -38,7 +38,7 @@ import org.springframework.util.ObjectUtils;
  */
 class CountQuery {
 
-	private Document source;
+	private final Document source;
 
 	private CountQuery(Document source) {
 		this.source = source;
@@ -101,7 +101,7 @@ class CountQuery {
 		}
 
 		if (valueToInspect instanceof Collection) {
-			return requiresRewrite((Collection) valueToInspect);
+			return requiresRewrite((Collection<?>) valueToInspect);
 		}
 
 		return false;
@@ -157,12 +157,14 @@ class CountQuery {
 	 * @param $and potentially existing {@code $and} condition.
 	 * @return the rewritten query {@link Document}.
 	 */
+	@SuppressWarnings("unchecked")
 	private static Document createGeoWithin(String key, Document source, @Nullable Object $and) {
 
 		boolean spheric = source.containsKey("$nearSphere");
 		Object $near = spheric ? source.get("$nearSphere") : source.get("$near");
 
-		Number maxDistance = source.containsKey("$maxDistance") ? (Number) source.get("$maxDistance") : Double.MAX_VALUE;
+		Number maxDistance = getMaxDistance(source, $near, spheric);
+
 		List<Object> $centerMax = Arrays.asList(toCenterCoordinates($near), maxDistance);
 		Document $geoWithinMax = new Document("$geoWithin",
 				new Document(spheric ? "$centerSphere" : "$center", $centerMax));
@@ -180,7 +182,7 @@ class CountQuery {
 
 		if ($and != null) {
 			if ($and instanceof Collection) {
-				Collection andElements = (Collection) $and;
+				Collection<Document> andElements = (Collection<Document>) $and;
 				criteria = new ArrayList<>(andElements.size() + 2);
 				criteria.addAll(andElements);
 			} else {
@@ -194,7 +196,31 @@ class CountQuery {
 
 		criteria.add(new Document("$nor", Collections.singletonList(new Document(key, $geoWithinMin))));
 		criteria.add(new Document(key, $geoWithinMax));
+
 		return new Document("$and", criteria);
+	}
+
+	private static Number getMaxDistance(Document source, Object $near, boolean spheric) {
+
+		Number maxDistance = Double.MAX_VALUE;
+
+		if (source.containsKey("$maxDistance")) { // legacy coordinate pair
+			return (Number) source.get("$maxDistance");
+		}
+
+		if ($near instanceof Document nearDoc) {
+
+			if (nearDoc.containsKey("$maxDistance")) {
+
+				maxDistance = (Number) nearDoc.get("$maxDistance");
+				// geojson is in Meters but we need radians x/(6378.1*1000)
+				if (spheric && nearDoc.containsKey("$geometry")) {
+					maxDistance = MetricConversion.metersToRadians(maxDistance.doubleValue());
+				}
+			}
+		}
+
+		return maxDistance;
 	}
 
 	private static boolean containsNear(Document source) {
@@ -220,10 +246,16 @@ class CountQuery {
 			return Arrays.asList(((Point) value).getX(), ((Point) value).getY());
 		}
 
-		if (value instanceof Document && ((Document) value).containsKey("x")) {
+		if (value instanceof Document document) {
 
-			Document point = (Document) value;
-			return Arrays.asList(point.get("x"), point.get("y"));
+			if (document.containsKey("x")) {
+				return Arrays.asList(document.get("x"), document.get("y"));
+			}
+
+			if (document.containsKey("$geometry")) {
+				Document geoJsonPoint = document.get("$geometry", Document.class);
+				return geoJsonPoint.get("coordinates");
+			}
 		}
 
 		return value;

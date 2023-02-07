@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 the original author or authors.
+ * Copyright 2021-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
  * Unit tests for {@link EvaluationOperators}.
  *
  * @author Mark Paluch
+ * @author Christoph Strobl
  */
 class EvaluationOperatorsUnitTests {
 
@@ -31,5 +32,12 @@ class EvaluationOperatorsUnitTests {
 
 		assertThat(EvaluationOperators.valueOf("foo").expr().toDocument(Aggregation.DEFAULT_CONTEXT))
 				.isEqualTo("{ $expr: \"$foo\" }");
+	}
+
+	@Test // GH-4139
+	void shouldRenderLocfCorrectly() {
+
+		assertThat(EvaluationOperators.valueOf("foo").locf().toDocument(Aggregation.DEFAULT_CONTEXT))
+				.isEqualTo("{ $locf: \"$foo\" }");
 	}
 }

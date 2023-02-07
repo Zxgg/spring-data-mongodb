@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class SubscriptionUtils {
 	 * Wait for all {@link Subscription Subscriptions} to {@link Subscription#isActive() become active} but not longer
 	 * than {@link #DEFAULT_TIMEOUT}.
 	 *
-	 * @param subscription
+	 * @param subscriptions
 	 * @throws InterruptedException
 	 */
 	static void awaitSubscriptions(Subscription... subscriptions) throws InterruptedException {
@@ -131,7 +131,8 @@ class SubscriptionUtils {
 	/**
 	 * {@link MessageListener} implementation collecting received {@link Message messages}.
 	 *
-	 * @param <M>
+	 * @param <S> source message type.
+	 * @param <T> target message type.
 	 */
 	static class CollectingMessageListener<S, T> implements MessageListener<S, T> {
 

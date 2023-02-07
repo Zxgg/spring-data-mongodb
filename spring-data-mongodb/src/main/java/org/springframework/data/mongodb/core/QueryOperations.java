@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 the original author or authors.
+ * Copyright 2020-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,6 @@ import org.springframework.data.projection.EntityProjection;
 import org.springframework.data.util.Lazy;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
 
 import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.DeleteOptions;
@@ -272,7 +271,7 @@ class QueryOperations {
 		 */
 		<T> MappedDocument prepareId(@Nullable MongoPersistentEntity<T> entity) {
 
-			if (entity == null) {
+			if (entity == null || source.hasId()) {
 				return source;
 			}
 
@@ -567,14 +566,11 @@ class QueryOperations {
 			if (query.getSkip() > 0) {
 				options.skip((int) query.getSkip());
 			}
-			if (StringUtils.hasText(query.getHint())) {
 
-				String hint = query.getHint();
-				if (BsonUtils.isJsonDocument(hint)) {
-					options.hint(BsonUtils.parse(hint, codecRegistryProvider));
-				} else {
-					options.hintString(hint);
-				}
+			HintFunction hintFunction = HintFunction.from(query.getHint());
+
+			if (hintFunction.isPresent()) {
+				options = hintFunction.apply(codecRegistryProvider, options::hintString, options::hint);
 			}
 
 			if (callback != null) {

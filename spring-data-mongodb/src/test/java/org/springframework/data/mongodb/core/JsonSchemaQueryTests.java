@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.schema.JsonSchemaProperty;
 import org.springframework.data.mongodb.core.schema.MongoJsonSchema;
 import org.springframework.data.mongodb.test.util.Client;
 import org.springframework.data.mongodb.test.util.MongoTemplateExtension;
@@ -83,6 +85,28 @@ public class JsonSchemaQueryTests {
 		template.save(jellyBelly);
 		template.save(roseSpringHeart);
 		template.save(kazmardBoombub);
+
+	}
+
+	@Test // DATAMONGO-1835
+	public void createsWorkingSchema() {
+
+		try {
+			template.dropCollection("person_schema");
+		} catch (Exception e) {}
+
+		MongoJsonSchema schema = MongoJsonSchemaCreator.create(template.getConverter()).createSchemaFor(Person.class);
+
+		template.createCollection("person_schema", CollectionOptions.empty().schema(schema));
+	}
+
+	@Test // DATAMONGO-1835
+	public void queriesBooleanType() {
+
+		MongoJsonSchema schema = MongoJsonSchema.builder().properties(JsonSchemaProperty.bool("alive")).build();
+
+		assertThat(template.find(query(matchingDocumentStructure(schema)), Person.class)).hasSize(3);
+		assertThat(template.find(query(Criteria.where("alive").type(Type.BOOLEAN)), Person.class)).hasSize(3);
 	}
 
 	@Test // DATAMONGO-1835
@@ -201,6 +225,8 @@ public class JsonSchemaQueryTests {
 		Gender gender;
 		Address address;
 		Object value;
+
+		boolean alive;
 	}
 
 	@Data

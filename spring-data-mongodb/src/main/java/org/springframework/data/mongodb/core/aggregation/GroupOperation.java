@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -387,6 +387,17 @@ public class GroupOperation implements FieldsExposingAggregationOperation {
 		return new GroupOperationBuilder(this, new Operation(accumulator));
 	}
 
+	/**
+	 * Adds a computed field to the {@link GroupOperation}.
+	 *
+	 * @param expression must not be {@literal null}.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	public GroupOperation and(String fieldName, AggregationExpression expression) {
+		return new GroupOperationBuilder(this, new Operation(expression)).as(fieldName);
+	}
+
 	private GroupOperationBuilder newBuilder(Keyword keyword, @Nullable String reference, @Nullable Object value) {
 		return new GroupOperationBuilder(this, new Operation(keyword, null, reference, value));
 	}
@@ -510,7 +521,7 @@ public class GroupOperation implements FieldsExposingAggregationOperation {
 				return value;
 			}
 
-			if (Aggregation.SystemVariable.isReferingToSystemVariable(reference)) {
+			if (SystemVariable.isReferingToSystemVariable(reference)) {
 				return reference;
 			}
 

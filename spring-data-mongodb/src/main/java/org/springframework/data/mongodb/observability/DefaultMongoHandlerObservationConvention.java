@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,84 @@
  */
 package org.springframework.data.mongodb.observability;
 
-import io.micrometer.common.KeyValue;
-import io.micrometer.common.KeyValues;
+import java.net.InetSocketAddress;
 
-import org.springframework.data.mongodb.observability.MongoObservation.HighCardinalityCommandKeyNames;
 import org.springframework.data.mongodb.observability.MongoObservation.LowCardinalityCommandKeyNames;
+import org.springframework.util.ObjectUtils;
 
+import com.mongodb.ConnectionString;
+import com.mongodb.ServerAddress;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ConnectionId;
 import com.mongodb.event.CommandStartedEvent;
+
+import io.micrometer.common.KeyValues;
 
 /**
  * Default {@link MongoHandlerObservationConvention} implementation.
  *
  * @author Greg Turnquist
- * @since 4.0.0
+ * @author Mark Paluch
+ * @since 4.0
  */
-public class DefaultMongoHandlerObservationConvention implements MongoHandlerObservationConvention {
+class DefaultMongoHandlerObservationConvention implements MongoHandlerObservationConvention {
 
 	@Override
 	public KeyValues getLowCardinalityKeyValues(MongoHandlerContext context) {
 
-		KeyValues keyValues = KeyValues.empty();
+		KeyValues keyValues = KeyValues.of(LowCardinalityCommandKeyNames.DB_SYSTEM.withValue("mongodb"),
+				LowCardinalityCommandKeyNames.MONGODB_COMMAND.withValue(context.getCommandName()));
 
-		if (context.getCollectionName() != null) {
+		ConnectionString connectionString = context.getConnectionString();
+		if (connectionString != null) {
+
+			keyValues = keyValues
+					.and(LowCardinalityCommandKeyNames.DB_CONNECTION_STRING.withValue(connectionString.getConnectionString()));
+
+			String user = connectionString.getUsername();
+
+			if (!ObjectUtils.isEmpty(user)) {
+				keyValues = keyValues.and(LowCardinalityCommandKeyNames.DB_USER.withValue(user));
+			}
+
+		}
+
+		if (!ObjectUtils.isEmpty(context.getDatabaseName())) {
+			keyValues = keyValues.and(LowCardinalityCommandKeyNames.DB_NAME.withValue(context.getDatabaseName()));
+		}
+
+		if (!ObjectUtils.isEmpty(context.getCollectionName())) {
 			keyValues = keyValues
 					.and(LowCardinalityCommandKeyNames.MONGODB_COLLECTION.withValue(context.getCollectionName()));
 		}
 
-		KeyValue connectionTag = connectionTag(context.getCommandStartedEvent());
-		if (connectionTag != null) {
-			keyValues = keyValues.and(connectionTag);
+		ConnectionDescription connectionDescription = context.getCommandStartedEvent().getConnectionDescription();
+
+		if (connectionDescription != null) {
+
+			ServerAddress serverAddress = connectionDescription.getServerAddress();
+
+			if (serverAddress != null) {
+
+				keyValues = keyValues.and(LowCardinalityCommandKeyNames.NET_TRANSPORT.withValue("IP.TCP"),
+						LowCardinalityCommandKeyNames.NET_PEER_NAME.withValue(serverAddress.getHost()),
+						LowCardinalityCommandKeyNames.NET_PEER_PORT.withValue("" + serverAddress.getPort()));
+
+				InetSocketAddress socketAddress = serverAddress.getSocketAddress();
+
+				if (socketAddress != null) {
+
+					keyValues = keyValues.and(
+							LowCardinalityCommandKeyNames.NET_SOCK_PEER_ADDR.withValue(socketAddress.getHostName()),
+							LowCardinalityCommandKeyNames.NET_SOCK_PEER_PORT.withValue("" + socketAddress.getPort()));
+				}
+			}
+
+			ConnectionId connectionId = connectionDescription.getConnectionId();
+			if (connectionId != null) {
+				keyValues = keyValues.and(LowCardinalityCommandKeyNames.MONGODB_CLUSTER_ID
+						.withValue(connectionId.getServerId().getClusterId().getValue()));
+			}
 		}
 
 		return keyValues;
@@ -53,30 +100,20 @@ public class DefaultMongoHandlerObservationConvention implements MongoHandlerObs
 
 	@Override
 	public KeyValues getHighCardinalityKeyValues(MongoHandlerContext context) {
-
-		return KeyValues.of(
-				HighCardinalityCommandKeyNames.MONGODB_COMMAND.withValue(context.getCommandStartedEvent().getCommandName()));
+		return KeyValues.empty();
 	}
 
-	/**
-	 * Extract connection details for a MongoDB connection into a {@link KeyValue}.
-	 *
-	 * @param event
-	 * @return
-	 */
-	private static KeyValue connectionTag(CommandStartedEvent event) {
+	@Override
+	public String getContextualName(MongoHandlerContext context) {
 
-		ConnectionDescription connectionDescription = event.getConnectionDescription();
+		String collectionName = context.getCollectionName();
+		CommandStartedEvent commandStartedEvent = context.getCommandStartedEvent();
 
-		if (connectionDescription != null) {
-
-			ConnectionId connectionId = connectionDescription.getConnectionId();
-			if (connectionId != null) {
-				return LowCardinalityCommandKeyNames.MONGODB_CLUSTER_ID
-						.withValue(connectionId.getServerId().getClusterId().getValue());
-			}
+		if (ObjectUtils.isEmpty(collectionName)) {
+			return commandStartedEvent.getCommandName();
 		}
 
-		return null;
+		return collectionName + "." + commandStartedEvent.getCommandName();
 	}
+
 }

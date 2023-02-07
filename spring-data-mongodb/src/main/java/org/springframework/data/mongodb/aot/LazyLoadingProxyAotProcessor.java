@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +23,27 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.aot.generate.GenerationContext;
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.TypeReference;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.data.annotation.Reference;
-import org.springframework.data.aot.TypeUtils;
 import org.springframework.data.mongodb.core.convert.LazyLoadingProxyFactory;
 import org.springframework.data.mongodb.core.convert.LazyLoadingProxyFactory.LazyLoadingInterceptor;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.DocumentReference;
+import org.springframework.data.util.TypeUtils;
 
 /**
  * @author Christoph Strobl
  * @since 4.0
  */
-class LazyLoadingProxyAotProcessor {
+public class LazyLoadingProxyAotProcessor {
 
 	private boolean generalLazyLoadingProxyContributed = false;
 
-	void registerLazyLoadingProxyIfNeeded(Class<?> type, GenerationContext generationContext) {
+	public void registerLazyLoadingProxyIfNeeded(Class<?> type, GenerationContext generationContext) {
 
 		Set<Field> refFields = getFieldsWithAnnotationPresent(type, Reference.class);
 		if (refFields.isEmpty()) {
@@ -74,7 +75,13 @@ class LazyLoadingProxyAotProcessor {
 
 						generationContext.getRuntimeHints().proxies().registerJdkProxy(interfaces.toArray(Class[]::new));
 					} else {
-						LazyLoadingProxyFactory.resolveProxyType(field.getType(), () -> LazyLoadingInterceptor.none());
+
+						Class<?> proxyClass = LazyLoadingProxyFactory.resolveProxyType(field.getType(),
+								() -> LazyLoadingInterceptor.none());
+
+						// see: spring-projects/spring-framework/issues/29309
+						generationContext.getRuntimeHints().reflection().registerType(proxyClass,
+								MemberCategory.INVOKE_DECLARED_CONSTRUCTORS, MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.DECLARED_FIELDS);
 					}
 				});
 	}

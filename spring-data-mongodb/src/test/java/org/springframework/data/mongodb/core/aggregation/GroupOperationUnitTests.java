@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,10 @@ import java.util.Arrays;
 
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.DocumentTestUtils;
+import org.springframework.data.mongodb.core.aggregation.SelectionOperators.Bottom;
 import org.springframework.data.mongodb.core.query.Criteria;
 
 /**
@@ -250,6 +253,17 @@ class GroupOperationUnitTests {
 		Document accumulatedValue = DocumentTestUtils.getAsDocument(groupClause, "accumulated-value");
 
 		assertThat(accumulatedValue).containsKey("$accumulator");
+	}
+
+	@Test // GH-4139
+	void groupOperationAllowsToAddFieldsComputedViaExpression() {
+
+		GroupOperation groupOperation = Aggregation.group("id").and("playerId",
+				Bottom.bottom().output("playerId", "score").sortBy(Sort.by(Direction.DESC, "score")));
+		Document groupClause = extractDocumentFromGroupOperation(groupOperation);
+
+		assertThat(groupClause).containsEntry("playerId",
+				Document.parse("{ $bottom : { output: [ \"$playerId\", \"$score\" ], sortBy: { \"score\": -1 }}}"));
 	}
 
 	private Document extractDocumentFromGroupOperation(GroupOperation groupOperation) {

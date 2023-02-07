@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1163,6 +1163,12 @@ public class SpelExpressionTransformerUnitTests {
 				.isEqualTo("{ $dateAdd: { startDate: \"$purchaseDate\", unit: \"day\", amount: 3 } }");
 	}
 
+	@Test // GH-4139
+	void shouldRenderDateSubtract() {
+		assertThat(transform("dateSubtract(purchaseDate, 'day', 3)"))
+				.isEqualTo("{ $dateSubtract: { startDate: \"$purchaseDate\", unit: \"day\", amount: 3 } }");
+	}
+
 	@Test // GH-3713
 	void shouldRenderDateDiff() {
 		assertThat(transform("dateDiff(purchaseDate, delivered, 'day')"))
@@ -1174,6 +1180,82 @@ public class SpelExpressionTransformerUnitTests {
 		assertThat(transform("rand()")).isEqualTo("{ $rand : {} }");
 	}
 
+	@Test // GH-4139
+	void shouldRenderBottom() {
+		assertThat(transform("bottom(new String[]{\"$playerId\", \"$score\" }, { \"score\" : -1 })")).isEqualTo("{ $bottom : { output: [ \"$playerId\", \"$score\" ], sortBy: { \"score\": -1 }}}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderBottomN() {
+		assertThat(transform("bottomN(3, new String[]{\"$playerId\", \"$score\" }, { \"score\" : -1 })")).isEqualTo("{ $bottomN : { n : 3, output: [ \"$playerId\", \"$score\" ], sortBy: { \"score\": -1 }}}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderTop() {
+		assertThat(transform("top(new String[]{\"$playerId\", \"$score\" }, { \"score\" : -1 })")).isEqualTo("{ $top : { output: [ \"$playerId\", \"$score\" ], sortBy: { \"score\": -1 }}}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderTopN() {
+		assertThat(transform("topN(3, new String[]{\"$playerId\", \"$score\" }, { \"score\" : -1 })")).isEqualTo("{ $topN : { n : 3, output: [ \"$playerId\", \"$score\" ], sortBy: { \"score\": -1 }}}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderFirstN() {
+		assertThat(transform("firstN(3, \"$score\")")).isEqualTo("{ $firstN : { n : 3, input : \"$score\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderLastN() {
+		assertThat(transform("lastN(3, \"$score\")")).isEqualTo("{ $lastN : { n : 3, input : \"$score\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderMaxN() {
+		assertThat(transform("maxN(3, \"$score\")")).isEqualTo("{ $maxN : { n : 3, input : \"$score\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderMinN() {
+		assertThat(transform("minN(3, \"$score\")")).isEqualTo("{ $minN : { n : 3, input : \"$score\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderDateTrunc() {
+		assertThat(transform("dateTrunc(purchaseDate, \"week\", 2, \"monday\")")).isEqualTo("{ $dateTrunc : { date : \"$purchaseDate\", unit : \"week\", binSize : 2, startOfWeek : \"monday\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderGetField() {
+		assertThat(transform("getField(\"score\", source)")).isEqualTo("{ $getField : { field : \"score\", input : \"$source\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderSetField() {
+		assertThat(transform("setField(\"score\", 100, source)")).isEqualTo("{ $setField : { field : \"score\", value : 100, input : \"$source\" }}");
+	}
+
+	@Test // GH-4139
+	void shouldRenderSortArray() {
+		assertThat(transform(
+				"sortArray(team, new org.bson.Document(\"name\" , 1))")).isEqualTo("{ $sortArray : { input : \"$team\", sortBy : {\"name\" : 1 } }}");
+	}
+
+	@Test // GH-4139
+	void shouldTsIncrement() {
+		assertThat(transform("tsIncrement(saleTimestamp)")).isEqualTo("{ $tsIncrement: \"$saleTimestamp\" }");
+	}
+
+	@Test // GH-4139
+	void shouldTsSecond() {
+		assertThat(transform("tsSecond(saleTimestamp)")).isEqualTo("{ $tsSecond: \"$saleTimestamp\" }");
+	}
+
+	@Test // GH-4139
+	void shouldRenderLocf() {
+		assertThat(transform("locf(price)")).isEqualTo("{ $locf: \"$price\" }");
+	}
+	
 	private Document transform(String expression, Object... params) {
 		return (Document) transformer.transform(expression, Aggregation.DEFAULT_CONTEXT, params);
 	}

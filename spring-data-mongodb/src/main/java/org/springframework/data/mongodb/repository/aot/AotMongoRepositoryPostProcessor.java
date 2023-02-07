@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.data.mongodb.aot;
+package org.springframework.data.mongodb.repository.aot;
 
 import org.springframework.aot.generate.GenerationContext;
-import org.springframework.data.aot.AotRepositoryContext;
-import org.springframework.data.aot.RepositoryRegistrationAotProcessor;
-import org.springframework.data.aot.TypeContributor;
-import org.springframework.data.aot.TypeUtils;
-import org.springframework.data.mongodb.core.mapping.MongoSimpleTypes;
+import org.springframework.data.mongodb.aot.LazyLoadingProxyAotProcessor;
+import org.springframework.data.mongodb.aot.MongoAotPredicates;
+import org.springframework.data.repository.config.AotRepositoryContext;
+import org.springframework.data.repository.config.RepositoryRegistrationAotProcessor;
+import org.springframework.data.util.TypeContributor;
+import org.springframework.data.util.TypeUtils;
 
 /**
  * @author Christoph Strobl
@@ -38,5 +39,14 @@ public class AotMongoRepositoryPostProcessor extends RepositoryRegistrationAotPr
 			TypeContributor.contribute(type, it -> true, generationContext);
 			lazyLoadingProxyAotProcessor.registerLazyLoadingProxyIfNeeded(type, generationContext);
 		});
+	}
+
+	@Override
+	protected void contributeType(Class<?> type, GenerationContext generationContext) {
+
+		if (TypeUtils.type(type).isPartOf("org.springframework.data.mongodb", "com.mongodb")) {
+			return;
+		}
+		super.contributeType(type, generationContext);
 	}
 }

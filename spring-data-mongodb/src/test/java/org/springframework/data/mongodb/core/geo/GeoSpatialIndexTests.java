@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2013-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,8 +117,8 @@ public class GeoSpatialIndexTests extends AbstractIntegrationTests {
 	/**
 	 * Returns whether an index with the given name exists for the given entity type.
 	 *
-	 * @param indexName
 	 * @param entityType
+	 * @param type
 	 * @return
 	 */
 	private boolean hasIndexOfType(Class<?> entityType, final String type) {

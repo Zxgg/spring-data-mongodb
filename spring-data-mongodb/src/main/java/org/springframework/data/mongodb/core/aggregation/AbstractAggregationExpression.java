@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2022 the original author or authors.
+ * Copyright 2016-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.bson.Document;
-import org.springframework.data.mongodb.core.aggregation.Aggregation.SystemVariable;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
+import org.springframework.data.mongodb.core.aggregation.ExposedFields.FieldReference;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -69,8 +73,31 @@ abstract class AbstractAggregationExpression implements AggregationExpression {
 			return ((AggregationExpression) value).toDocument(context);
 		}
 
-		if (value instanceof Field) {
-			return context.getReference((Field) value).toString();
+		if (value instanceof Field field) {
+			return context.getReference(field).toString();
+		}
+
+		if (value instanceof Fields fields) {
+
+			List<Object> mapped = new ArrayList<>(fields.size());
+
+			for (Field field : fields) {
+				mapped.add(unpack(field, context));
+			}
+
+			return mapped;
+		}
+
+		if (value instanceof Sort sort) {
+
+			Document sortDoc = new Document();
+			for (Order order : sort) {
+
+				// Check reference
+				FieldReference reference = context.getReference(order.getProperty());
+				sortDoc.put(reference.getRaw(), order.isAscending() ? 1 : -1);
+			}
+			return sortDoc;
 		}
 
 		if (value instanceof List) {
@@ -78,7 +105,9 @@ abstract class AbstractAggregationExpression implements AggregationExpression {
 			List<Object> sourceList = (List<Object>) value;
 			List<Object> mappedList = new ArrayList<>(sourceList.size());
 
-			sourceList.stream().map((item) -> unpack(item, context)).forEach(mappedList::add);
+			for (Object o : sourceList) {
+				mappedList.add(unpack(o, context));
+			}
 
 			return mappedList;
 		}
@@ -130,14 +159,46 @@ abstract class AbstractAggregationExpression implements AggregationExpression {
 		return append(value, Expand.EXPAND_VALUES);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked" })
 	protected Map<String, Object> append(String key, Object value) {
 
 		Assert.isInstanceOf(Map.class, this.value, "Value must be a type of Map");
 
-		Map<String, Object> clone = new LinkedHashMap<>((java.util.Map) this.value);
+		return append((Map<String, Object>) this.value, key, value);
+	}
+
+	private Map<String, Object> append(Map<String, Object> existing, String key, Object value) {
+
+		Map<String, Object> clone = new LinkedHashMap<>(existing);
 		clone.put(key, value);
 		return clone;
+	}
+
+	@SuppressWarnings("rawtypes")
+	protected Map<String, Object> appendTo(String key, Object value) {
+
+		Assert.isInstanceOf(Map.class, this.value, "Value must be a type of Map");
+
+		if (this.value instanceof Map map) {
+
+			Map<String, Object> target = new HashMap<>(map);
+			if (!target.containsKey(key)) {
+				target.put(key, value);
+				return target;
+			}
+			target.computeIfPresent(key, (k, v) -> {
+
+				if (v instanceof List<?> list) {
+					List<Object> targetList = new ArrayList<>(list);
+					targetList.add(value);
+					return targetList;
+				}
+				return Arrays.asList(v, value);
+			});
+			return target;
+		}
+		throw new IllegalStateException(
+				String.format("Cannot append value to %s type", ObjectUtils.nullSafeClassName(this.value)));
 
 	}
 
@@ -226,6 +287,10 @@ abstract class AbstractAggregationExpression implements AggregationExpression {
 		Assert.isInstanceOf(Map.class, this.value, "Value must be a type of Map");
 
 		return (T) ((Map<String, Object>) this.value).get(key);
+	}
+
+	protected boolean isArgumentMap() {
+		return this.value instanceof Map;
 	}
 
 	/**

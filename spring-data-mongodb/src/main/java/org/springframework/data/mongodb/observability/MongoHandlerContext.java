@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2022 the original author or authors.
+ * Copyright 2022-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package org.springframework.data.mongodb.observability;
 
-import io.micrometer.observation.Observation;
-
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -25,28 +23,37 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.springframework.lang.Nullable;
 
+import com.mongodb.ConnectionString;
 import com.mongodb.RequestContext;
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
+
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.transport.Kind;
+import io.micrometer.observation.transport.SenderContext;
 
 /**
  * A {@link Observation.Context} that contains MongoDB events.
  *
  * @author Marcin Grzejszczak
  * @author Greg Turnquist
- * @since 4.0.0
+ * @author Mark Paluch
+ * @since 4.0
  */
-public class MongoHandlerContext extends Observation.Context {
+class MongoHandlerContext extends SenderContext<Object> {
 
 	/**
-	 * @see https://docs.mongodb.com/manual/reference/command for the command reference
+	 * @see <a href=
+	 *      "https://docs.mongodb.com/manual/reference/command">https://docs.mongodb.com/manual/reference/command</a> for
+	 *      the command reference
 	 */
 	private static final Set<String> COMMANDS_WITH_COLLECTION_NAME = new LinkedHashSet<>(
 			Arrays.asList("aggregate", "count", "distinct", "mapReduce", "geoSearch", "delete", "find", "findAndModify",
 					"insert", "update", "collMod", "compact", "convertToCapped", "create", "createIndexes", "drop", "dropIndexes",
 					"killCursors", "listIndexes", "reIndex"));
 
+	private final @Nullable ConnectionString connectionString;
 	private final CommandStartedEvent commandStartedEvent;
 	private final RequestContext requestContext;
 	private final String collectionName;
@@ -54,8 +61,11 @@ public class MongoHandlerContext extends Observation.Context {
 	private CommandSucceededEvent commandSucceededEvent;
 	private CommandFailedEvent commandFailedEvent;
 
-	public MongoHandlerContext(CommandStartedEvent commandStartedEvent, RequestContext requestContext) {
+	public MongoHandlerContext(@Nullable ConnectionString connectionString, CommandStartedEvent commandStartedEvent,
+			RequestContext requestContext) {
 
+		super((carrier, key, value) -> {}, Kind.CLIENT);
+		this.connectionString = connectionString;
 		this.commandStartedEvent = commandStartedEvent;
 		this.requestContext = requestContext;
 		this.collectionName = getCollectionName(commandStartedEvent);
@@ -69,17 +79,21 @@ public class MongoHandlerContext extends Observation.Context {
 		return this.requestContext;
 	}
 
+	public String getDatabaseName() {
+		return commandStartedEvent.getDatabaseName();
+	}
+
 	public String getCollectionName() {
 		return this.collectionName;
 	}
 
-	public String getContextualName() {
+	public String getCommandName() {
+		return commandStartedEvent.getCommandName();
+	}
 
-		if (this.collectionName == null) {
-			return this.commandStartedEvent.getCommandName();
-		}
-
-		return this.commandStartedEvent.getCommandName() + " " + this.collectionName;
+	@Nullable
+	public ConnectionString getConnectionString() {
+		return connectionString;
 	}
 
 	public void setCommandSucceededEvent(CommandSucceededEvent commandSucceededEvent) {
@@ -112,7 +126,7 @@ public class MongoHandlerContext extends Observation.Context {
 		}
 
 		// Some other commands, like getMore, have a field like {"collection": collectionName}.
-		return getNonEmptyBsonString(command.get("collection"));
+		return command == null ? "" : getNonEmptyBsonString(command.get("collection"));
 	}
 
 	/**
@@ -121,7 +135,7 @@ public class MongoHandlerContext extends Observation.Context {
 	 * @return trimmed string from {@code bsonValue} or null if the trimmed string was empty or the value wasn't a string
 	 */
 	@Nullable
-	private static String getNonEmptyBsonString(BsonValue bsonValue) {
+	private static String getNonEmptyBsonString(@Nullable BsonValue bsonValue) {
 
 		if (bsonValue == null || !bsonValue.isString()) {
 			return null;
@@ -131,4 +145,5 @@ public class MongoHandlerContext extends Observation.Context {
 
 		return stringValue.isEmpty() ? null : stringValue;
 	}
+
 }
